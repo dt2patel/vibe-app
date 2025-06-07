@@ -2,6 +2,9 @@
   <ion-page>
     <ion-header>
       <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-back-button default-href="/users" />
+        </ion-buttons>
         <ion-title>{{ otherUser?.email || 'Chat' }}</ion-title>
       </ion-toolbar>
     </ion-header>
@@ -37,7 +40,9 @@ import {
   IonInput,
   IonButton,
   IonList,
-  IonLabel
+  IonLabel,
+  IonBackButton,
+  IonButtons
 } from '@ionic/vue'
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
@@ -53,15 +58,16 @@ import {
   doc,
   getDoc
 } from 'firebase/firestore'
+import { onAuthStateChanged } from 'firebase/auth'
 
 const route = useRoute()
 const otherUid = route.params.uid as string
-const currentUid = auth.currentUser?.uid || ''
+const currentUid = ref(auth.currentUser?.uid || '')
 const otherUser = ref<any | null>(null)
 const newMessage = ref('')
 const messages = ref<any[]>([])
 
-const chatId = computed(() => [currentUid, otherUid].sort().join('_'))
+const chatId = computed(() => [currentUid.value, otherUid].sort().join('_'))
 
 onMounted(async () => {
   const userSnap = await getDoc(doc(db, 'users', otherUid))
@@ -69,21 +75,35 @@ onMounted(async () => {
     otherUser.value = userSnap.data()
   }
 
-  const q = query(
-    collection(db, 'messages'),
-    where('chatId', '==', chatId.value),
-    orderBy('createdAt')
-  )
-  onSnapshot(q, (snapshot) => {
-    messages.value = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as any[]
-  })
+  function setupListener() {
+    const q = query(
+      collection(db, 'messages'),
+      where('chatId', '==', chatId.value),
+      orderBy('createdAt')
+    )
+    onSnapshot(q, (snapshot) => {
+      messages.value = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as any[]
+    })
+  }
+
+  if (!currentUid.value) {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUid.value = user.uid
+        setupListener()
+        unsub()
+      }
+    })
+  } else {
+    setupListener()
+  }
 })
 
 async function sendMessage() {
   if (!newMessage.value.trim()) return
   await addDoc(collection(db, 'messages'), {
     chatId: chatId.value,
-    from: currentUid,
+    from: currentUid.value,
     to: otherUid,
     text: newMessage.value,
     createdAt: serverTimestamp()
