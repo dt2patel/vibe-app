@@ -44,7 +44,7 @@ import {
   IonBackButton,
   IonButtons
 } from '@ionic/vue'
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { auth, db } from '@/firebase'
 import {
@@ -69,34 +69,45 @@ const messages = ref<any[]>([])
 
 const chatId = computed(() => [currentUid.value, otherUid].sort().join('_'))
 
+let unsubMessages: (() => void) | null = null
+
+async function startListener() {
+  if (unsubMessages) unsubMessages()
+  const q = query(
+    collection(db, 'messages'),
+    where('chatId', '==', chatId.value),
+    orderBy('createdAt')
+  )
+  unsubMessages = onSnapshot(q, (snapshot) => {
+    messages.value = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as any[]
+  })
+}
+
 onMounted(async () => {
   const userSnap = await getDoc(doc(db, 'users', otherUid))
   if (userSnap.exists()) {
     otherUser.value = userSnap.data()
   }
 
-  function setupListener() {
-    const q = query(
-      collection(db, 'messages'),
-      where('chatId', '==', chatId.value),
-      orderBy('createdAt')
-    )
-    onSnapshot(q, (snapshot) => {
-      messages.value = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as any[]
-    })
-  }
-
-  if (!currentUid.value) {
-    const unsub = onAuthStateChanged(auth, (user) => {
+  if (currentUid.value) {
+    startListener()
+  } else {
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         currentUid.value = user.uid
-        setupListener()
-        unsub()
+        startListener()
+        unsubAuth()
       }
     })
-  } else {
-    setupListener()
   }
+})
+
+watch(currentUid, (uid) => {
+  if (uid) startListener()
+})
+
+onUnmounted(() => {
+  if (unsubMessages) unsubMessages()
 })
 
 async function sendMessage() {
