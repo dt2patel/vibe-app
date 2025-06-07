@@ -6,6 +6,11 @@
           <ion-back-button default-href="/users" />
         </ion-buttons>
         <ion-title>{{ otherUser?.email || 'Chat' }}</ion-title>
+        <ion-buttons slot="end">
+          <ion-button @click="logout">
+            <ion-icon :icon="logOutOutline" />
+          </ion-button>
+        </ion-buttons>
       </ion-toolbar>
     </ion-header>
     <ion-content class="ion-padding">
@@ -42,10 +47,11 @@ import {
   IonList,
   IonLabel,
   IonBackButton,
-  IonButtons
+  IonButtons,
+  IonIcon
 } from '@ionic/vue'
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { auth, db } from '@/firebase'
 import {
   collection,
@@ -57,9 +63,11 @@ import {
   doc,
   getDoc
 } from 'firebase/firestore'
-import { onAuthStateChanged } from 'firebase/auth'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
+import { logOutOutline } from 'ionicons/icons'
 
 const route = useRoute()
+const router = useRouter()
 const otherUid = route.params.uid as string
 const currentUid = ref(auth.currentUser?.uid || '')
 const otherUser = ref<any | null>(null)
@@ -110,6 +118,11 @@ watch(currentUid, (uid) => {
 onUnmounted(() => {
   if (unsubMessages) unsubMessages()
 })
+
+async function logout() {
+  await signOut(auth)
+  router.push('/auth')
+}
 
 async function sendMessage() {
   if (!newMessage.value.trim()) return

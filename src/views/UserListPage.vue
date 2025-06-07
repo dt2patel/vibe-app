@@ -3,6 +3,11 @@
     <ion-header>
       <ion-toolbar>
         <ion-title>Users</ion-title>
+        <ion-buttons slot="end">
+          <ion-button @click="logout">
+            <ion-icon :icon="logOutOutline" />
+          </ion-button>
+        </ion-buttons>
       </ion-toolbar>
     </ion-header>
     <ion-content class="ion-padding">
@@ -28,12 +33,17 @@ import {
   IonTitle,
   IonContent,
   IonList,
-  IonItem
+  IonItem,
+  IonButtons,
+  IonButton,
+  IonIcon
 } from '@ionic/vue'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth, db } from '@/firebase'
 import { collection, getDocs } from 'firebase/firestore'
+import { signOut } from 'firebase/auth'
+import { logOutOutline } from 'ionicons/icons'
 
 const router = useRouter()
 const users = ref<any[]>([])
@@ -48,6 +58,11 @@ async function loadUsers() {
 
 function openChat(uid: string) {
   router.push(`/chat/${uid}`)
+}
+
+async function logout() {
+  await signOut(auth)
+  router.push('/auth')
 }
 
 onMounted(() => {

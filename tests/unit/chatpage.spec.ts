@@ -28,7 +28,10 @@ vi.mock('firebase/firestore', () => ({
 
 vi.mock('firebase/auth', () => ({ onAuthStateChanged: vi.fn() }))
 
-vi.mock('vue-router', () => ({ useRoute: () => ({ params: { uid: 'u2' } }) }))
+vi.mock('vue-router', () => ({
+  useRoute: () => ({ params: { uid: 'u2' } }),
+  useRouter: () => ({ push: vi.fn() })
+}))
 
 describe('ChatPage', () => {
   test('displays messages from snapshot', async () => {
