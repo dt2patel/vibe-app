@@ -1,21 +1,20 @@
 <template>
   <ion-page>
-    <ion-header>
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button default-href="/users" />
-        </ion-buttons>
-        <ion-title>{{ otherUser?.email || 'Chat' }}</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    <user-header :title="otherUser?.email || 'Chat'" back-href="/users" />
     <ion-content class="ion-padding">
       <ion-list>
-        <ion-item v-for="msg in messages" :key="msg.id">
+        <ion-item
+          v-for="msg in messages"
+          :key="msg.id"
+          lines="none"
+          class="message"
+          :class="{ mine: msg.from === currentUid }"
+        >
           <ion-label>
-            <div>
+            <div class="bubble">
               <strong>{{ msg.from === currentUid ? 'Me' : otherUser?.email }}</strong>
+              <div>{{ msg.text }}</div>
             </div>
-            <div>{{ msg.text }}</div>
           </ion-label>
         </ion-item>
       </ion-list>
@@ -32,18 +31,14 @@
 <script setup lang="ts">
 import {
   IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
   IonContent,
   IonItem,
   IonInput,
   IonButton,
   IonList,
-  IonLabel,
-  IonBackButton,
-  IonButtons
+  IonLabel
 } from '@ionic/vue'
+import UserHeader from '@/components/UserHeader.vue'
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { auth, db } from '@/firebase'
@@ -123,3 +118,20 @@ async function sendMessage() {
   newMessage.value = ''
 }
 </script>
+
+<style scoped>
+.message {
+  --inner-padding-end: 0;
+}
+
+.bubble {
+  background: var(--ion-color-light);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.message.mine .bubble {
+  background: var(--ion-color-primary);
+  color: white;
+}
+</style>

@@ -1,10 +1,6 @@
 <template>
   <ion-page>
-    <ion-header>
-      <ion-toolbar>
-        <ion-title>Users</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    <user-header title="Users" />
     <ion-content class="ion-padding">
       <ion-list>
         <ion-item
@@ -23,13 +19,11 @@
 <script setup lang="ts">
 import {
   IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
   IonContent,
   IonList,
   IonItem
 } from '@ionic/vue'
+import UserHeader from '@/components/UserHeader.vue'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth, db } from '@/firebase'
@@ -54,4 +48,10 @@ onMounted(() => {
   loadUsers()
 })
 </script>
+
+<style scoped>
+ion-item {
+  --padding-start: 16px;
+}
+</style>
 

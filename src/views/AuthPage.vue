@@ -1,33 +1,39 @@
 <template>
   <ion-page>
     <ion-header>
-      <ion-toolbar>
-        <ion-title>Login / Register</ion-title>
+      <ion-toolbar color="primary">
+        <ion-title>{{ modeLabel }}</ion-title>
       </ion-toolbar>
     </ion-header>
     <ion-content class="ion-padding">
-      <form @submit.prevent="onSubmit">
-        <ion-item>
-          <ion-label position="stacked">Email</ion-label>
-          <ion-input v-model="email" type="email" required></ion-input>
-        </ion-item>
-        <ion-item>
-          <ion-label position="stacked">Password</ion-label>
-          <ion-input v-model="password" type="password" required></ion-input>
-        </ion-item>
-        <ion-row class="ion-margin-top">
-          <ion-col>
-            <ion-button expand="block" type="submit">{{ modeLabel }}</ion-button>
-          </ion-col>
-        </ion-row>
-        <ion-row>
-          <ion-col class="ion-text-center">
-            <ion-button fill="clear" size="small" @click="toggleMode">
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>{{ modeLabel }}</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <form @submit.prevent="onSubmit">
+            <ion-item>
+              <ion-label position="stacked">Email</ion-label>
+              <ion-input v-model="email" type="email" required></ion-input>
+            </ion-item>
+            <ion-item>
+              <ion-label position="stacked">Password</ion-label>
+              <ion-input v-model="password" type="password" required></ion-input>
+            </ion-item>
+            <ion-button expand="block" type="submit" class="ion-margin-top">{{
+              modeLabel
+            }}</ion-button>
+            <ion-button
+              fill="clear"
+              size="small"
+              @click="toggleMode"
+              class="ion-margin-top"
+            >
               {{ toggleLabel }}
             </ion-button>
-          </ion-col>
-        </ion-row>
-      </form>
+          </form>
+        </ion-card-content>
+      </ion-card>
     </ion-content>
   </ion-page>
 </template>
@@ -45,8 +51,10 @@ import {
   IonLabel,
   IonInput,
   IonButton,
-  IonRow,
-  IonCol
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardContent
 } from '@ionic/vue'
 import { auth, db } from '@/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
@@ -88,3 +96,10 @@ async function onSubmit() {
   }
 }
 </script>
+
+<style scoped>
+ion-card {
+  max-width: 400px;
+  margin: auto;
+}
+</style>
