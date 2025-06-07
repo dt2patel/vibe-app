@@ -15,6 +15,7 @@
 - For new pages, create a folder in `src/views/`.
 - Register new routes in `src/router/index.js`.
 - Add navigation links in `src/components/SideMenu.vue`.
+- Prefer native Ionic UI components and utilities. Avoid custom CSS unless absolutely required.
 
 ## Branch & PR Process
 - Create a new branch for each feature or fix.
