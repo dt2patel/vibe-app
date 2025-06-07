@@ -1,5 +1,5 @@
 {
-  "name": "Blank Starter",
+  "name": "Vibe App",
   "baseref": "main",
   "tarignore": [
     "node_modules",
