@@ -71,16 +71,20 @@ const chatId = computed(() => [currentUid.value, otherUid].sort().join('_'))
 let unsubMessages: (() => void) | null = null
 
 async function startListener() {
+  if (!currentUid.value || !chatId.value) return
   if (unsubMessages) unsubMessages()
   const q = query(collection(db, 'messages'), where('chatId', '==', chatId.value))
   unsubMessages = onSnapshot(q, (snapshot) => {
     messages.value = snapshot.docs
-      .map((d) => ({ id: d.id, ...d.data() }))
+      .map((d) => {
+        const data = d.data() as Record<string, any>
+        return { id: d.id, ...data }
+      })
       .sort((a, b) => {
         const aTime = a.createdAt?.seconds || 0
         const bTime = b.createdAt?.seconds || 0
         return aTime - bTime
-      }) as any[]
+      })
   })
 }
 
