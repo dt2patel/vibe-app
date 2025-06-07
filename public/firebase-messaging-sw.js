@@ -1,7 +1,5 @@
-import { initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
-import { getMessaging } from 'firebase/messaging'
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js'
+import { getMessaging, onBackgroundMessage } from 'https://www.gstatic.com/firebasejs/11.9.0/firebase-messaging-sw.js'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -13,7 +11,8 @@ const firebaseConfig = {
 }
 
 const app = initializeApp(firebaseConfig)
-export const auth = getAuth(app)
-export const db = getFirestore(app)
-export const messaging = getMessaging(app)
+const messaging = getMessaging(app)
 
+onBackgroundMessage(messaging, payload => {
+  console.log('[Service Worker] Background message received', payload)
+})

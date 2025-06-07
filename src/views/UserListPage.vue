@@ -22,6 +22,19 @@
         </ion-item>
       </ion-list>
     </ion-content>
+    <ion-toast
+      :is-open="showPushToast"
+      message="Push notifications?"
+      position="bottom"
+      :duration="15000"
+      :buttons="[
+        {
+          text: 'Enable',
+          handler: enablePush
+        }
+      ]"
+      @didDismiss="showPushToast = false"
+    />
   </ion-page>
 </template>
 
@@ -36,17 +49,20 @@ import {
   IonItem,
   IonButtons,
   IonButton,
-  IonIcon
+  IonIcon,
+  IonToast
 } from '@ionic/vue'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { auth, db } from '@/firebase'
+import { auth, db, messaging } from '@/firebase'
 import { collection, getDocs } from 'firebase/firestore'
 import { signOut } from 'firebase/auth'
+import { getToken } from 'firebase/messaging'
 import { logOutOutline } from 'ionicons/icons'
 
 const router = useRouter()
 const users = ref<any[]>([])
+const showPushToast = ref(false)
 
 async function loadUsers() {
   const snapshot = await getDocs(collection(db, 'users'))
@@ -60,6 +76,28 @@ function openChat(uid: string) {
   router.push(`/chat/${uid}`)
 }
 
+async function enablePush() {
+  try {
+    const permission = await Notification.requestPermission()
+    if (permission !== 'granted') {
+      return
+    }
+    const registration = await navigator.serviceWorker.register(
+      '/firebase-messaging-sw.js',
+      { type: 'module' }
+    )
+    const token = await getToken(messaging, {
+      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+      serviceWorkerRegistration: registration
+    })
+    console.log('FCM token:', token)
+  } catch (err) {
+    console.error('Failed to enable push', err)
+  } finally {
+    showPushToast.value = false
+  }
+}
+
 async function logout() {
   await signOut(auth)
   router.push('/auth')
@@ -67,6 +105,13 @@ async function logout() {
 
 onMounted(() => {
   loadUsers()
+  if (
+    'Notification' in window &&
+    'serviceWorker' in navigator &&
+    Notification.permission === 'default'
+  ) {
+    showPushToast.value = true
+  }
 })
 </script>
 
