@@ -31,5 +31,15 @@ npm-debug.log*
 /plugins
 /www
 
+# Cypress artifacts
+cypress/videos/
+cypress/screenshots/
+
+# Logs directory
+/logs
+
+# Environment files
+.env.*
+
 .env
 .firebase
