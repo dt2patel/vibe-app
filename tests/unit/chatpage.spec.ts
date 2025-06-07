@@ -43,7 +43,14 @@ describe('ChatPage', () => {
           IonContent: slotStub,
           IonList: slotStub,
           IonItem: slotStub,
-          IonLabel: slotStub
+          IonLabel: slotStub,
+          IonLoading: slotStub,
+          IonSkeletonText: slotStub,
+          IonBackButton: slotStub,
+          IonButtons: slotStub,
+          IonIcon: slotStub,
+          IonInput: slotStub,
+          IonButton: slotStub
         }
       }
     })
@@ -51,5 +58,30 @@ describe('ChatPage', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('Hello')
     expect(wrapper.text()).toContain('Hi there')
+  })
+
+  test('dismisses loading state after snapshot', async () => {
+    const slotStub = { template: '<div><slot /></div>' }
+    const wrapper = shallowMount(ChatPage, {
+      global: {
+        stubs: {
+          IonPage: slotStub,
+          IonContent: slotStub,
+          IonList: slotStub,
+          IonItem: slotStub,
+          IonLabel: slotStub,
+          IonLoading: slotStub,
+          IonSkeletonText: slotStub,
+          IonBackButton: slotStub,
+          IonButtons: slotStub,
+          IonIcon: slotStub,
+          IonInput: slotStub,
+          IonButton: slotStub
+        }
+      }
+    })
+    await flushPromises()
+    await flushPromises()
+    expect((wrapper.vm as any).loadingMessages).toBe(false)
   })
 })

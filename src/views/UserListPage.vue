@@ -11,7 +11,12 @@
       </ion-toolbar>
     </ion-header>
     <ion-content class="ion-padding">
-      <ion-list>
+      <ion-list v-if="loading">
+        <ion-item v-for="n in 5" :key="n">
+          <ion-skeleton-text animated style="width: 100%" />
+        </ion-item>
+      </ion-list>
+      <ion-list v-else>
         <ion-item
           v-for="user in users"
           :key="user.uid"
@@ -34,6 +39,7 @@ import {
   IonContent,
   IonList,
   IonItem,
+  IonSkeletonText,
   IonButtons,
   IonButton,
   IonIcon
@@ -47,13 +53,16 @@ import { logOutOutline } from 'ionicons/icons'
 
 const router = useRouter()
 const users = ref<any[]>([])
+const loading = ref(true)
 
 async function loadUsers() {
+  loading.value = true
   const snapshot = await getDocs(collection(db, 'users'))
   const currentUid = auth.currentUser?.uid
   users.value = snapshot.docs
     .map((d) => d.data())
     .filter((u) => u.uid !== currentUid)
+  loading.value = false
 }
 
 function openChat(uid: string) {
