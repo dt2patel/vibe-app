@@ -17,7 +17,10 @@
         </ion-item>
         <ion-row class="ion-margin-top">
           <ion-col>
-            <ion-button expand="block" type="submit">{{ modeLabel }}</ion-button>
+            <ion-button expand="block" type="submit" :disabled="loading">
+              <ion-spinner v-if="loading" slot="start" name="crescent" />
+              {{ submitLabel }}
+            </ion-button>
           </ion-col>
         </ion-row>
         <ion-row>
@@ -46,7 +49,8 @@ import {
   IonInput,
   IonButton,
   IonRow,
-  IonCol
+  IonCol,
+  IonSpinner
 } from '@ionic/vue'
 import { auth, db } from '@/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
@@ -56,8 +60,12 @@ const router = useRouter()
 const email = ref('')
 const password = ref('')
 const isLogin = ref(true)
+const loading = ref(false)
 
 const modeLabel = computed(() => (isLogin.value ? 'Login' : 'Register'))
+const submitLabel = computed(() =>
+  loading.value ? (isLogin.value ? 'Logging in' : 'Registering') : modeLabel.value
+)
 const toggleLabel = computed(() =>
   isLogin.value ? "Don't have an account? Register" : 'Already have an account? Login'
 )
@@ -67,6 +75,7 @@ function toggleMode() {
 }
 
 async function onSubmit() {
+  loading.value = true
   try {
     if (isLogin.value) {
       await signInWithEmailAndPassword(auth, email.value, password.value)
@@ -85,6 +94,8 @@ async function onSubmit() {
   } catch (err) {
     console.error(err)
     alert('Authentication failed')
+  } finally {
+    loading.value = false
   }
 }
 </script>
