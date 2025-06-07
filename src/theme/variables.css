@@ -26,3 +26,14 @@
   --ion-color-dark-contrast: #ffffff;
   --ion-color-dark-contrast-rgb: 255, 255, 255;
 }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ion-color-primary: #ffffff;
+    --ion-color-primary-rgb: 255, 255, 255;
+    --ion-color-primary-contrast: #000000;
+    --ion-color-primary-contrast-rgb: 0, 0, 0;
+    --ion-color-primary-shade: #e6e6e6;
+    --ion-color-primary-tint: #ffffff;
+  }
+}
