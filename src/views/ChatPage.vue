@@ -51,7 +51,6 @@ import {
   collection,
   query,
   where,
-  orderBy,
   onSnapshot,
   addDoc,
   serverTimestamp,
@@ -73,13 +72,15 @@ let unsubMessages: (() => void) | null = null
 
 async function startListener() {
   if (unsubMessages) unsubMessages()
-  const q = query(
-    collection(db, 'messages'),
-    where('chatId', '==', chatId.value),
-    orderBy('createdAt')
-  )
+  const q = query(collection(db, 'messages'), where('chatId', '==', chatId.value))
   unsubMessages = onSnapshot(q, (snapshot) => {
-    messages.value = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as any[]
+    messages.value = snapshot.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => {
+        const aTime = a.createdAt?.seconds || 0
+        const bTime = b.createdAt?.seconds || 0
+        return aTime - bTime
+      }) as any[]
   })
 }
 
