@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from '@ionic/vue-router';
 import { RouteRecordRaw } from 'vue-router';
 import AuthPage from '../views/AuthPage.vue'
 import UserListPage from '../views/UserListPage.vue'
+import ChatPage from '../views/ChatPage.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -17,6 +18,11 @@ const routes: Array<RouteRecordRaw> = [
     path: '/users',
     name: 'Users',
     component: UserListPage
+  },
+  {
+    path: '/chat/:uid',
+    name: 'Chat',
+    component: ChatPage
   }
 ]
 

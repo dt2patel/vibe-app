@@ -48,8 +48,9 @@ import {
   IonRow,
   IonCol
 } from '@ionic/vue'
-import { auth } from '@/firebase'
+import { auth, db } from '@/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
+import { doc, setDoc } from 'firebase/firestore'
 
 const router = useRouter()
 const email = ref('')
@@ -70,7 +71,15 @@ async function onSubmit() {
     if (isLogin.value) {
       await signInWithEmailAndPassword(auth, email.value, password.value)
     } else {
-      await createUserWithEmailAndPassword(auth, email.value, password.value)
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        email.value,
+        password.value
+      )
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        uid: cred.user.uid,
+        email: cred.user.email
+      })
     }
     router.push('/users')
   } catch (err) {
