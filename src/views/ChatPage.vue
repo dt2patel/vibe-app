@@ -14,7 +14,15 @@
       </ion-toolbar>
     </ion-header>
     <ion-content class="ion-padding">
-      <ion-list>
+      <ion-loading :is-open="loadingUser" message="Loading chat..." />
+      <ion-list v-if="loadingMessages">
+        <ion-item v-for="n in 5" :key="n">
+          <ion-label>
+            <ion-skeleton-text animated style="width: 100%" />
+          </ion-label>
+        </ion-item>
+      </ion-list>
+      <ion-list v-else>
         <ion-item v-for="msg in messages" :key="msg.id">
           <ion-label>
             <div>
@@ -48,7 +56,8 @@ import {
   IonLabel,
   IonBackButton,
   IonButtons,
-  IonIcon
+  IonIcon,
+  IonSkeletonText
 } from '@ionic/vue'
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -73,6 +82,8 @@ const currentUid = ref(auth.currentUser?.uid || '')
 const otherUser = ref<any | null>(null)
 const newMessage = ref('')
 const messages = ref<any[]>([])
+const loadingMessages = ref(true)
+const loadingUser = ref(true)
 
 const chatId = computed(() => [currentUid.value, otherUid].sort().join('_'))
 
@@ -81,6 +92,7 @@ let unsubMessages: (() => void) | null = null
 async function startListener() {
   if (unsubMessages) unsubMessages()
   const q = query(collection(db, 'messages'), where('chatId', '==', chatId.value))
+  loadingMessages.value = true
   unsubMessages = onSnapshot(q, (snapshot) => {
     messages.value = snapshot.docs
       .map((d) => ({ id: d.id, ...d.data() }))
@@ -89,6 +101,7 @@ async function startListener() {
         const bTime = (b as any).createdAt?.seconds || 0
         return aTime - bTime
       }) as any[]
+    loadingMessages.value = false
   })
 }
 
@@ -97,6 +110,7 @@ onMounted(async () => {
   if (userSnap.exists()) {
     otherUser.value = userSnap.data()
   }
+  loadingUser.value = false
 
   if (currentUid.value) {
     startListener()
