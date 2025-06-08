@@ -5,7 +5,7 @@
         <ion-buttons slot="start">
           <ion-back-button default-href="/users" />
         </ion-buttons>
-        <ion-title>{{ otherUser?.email || 'Chat' }}</ion-title>
+        <ion-title>{{ otherUser?.email || "Chat" }}</ion-title>
         <ion-buttons slot="end">
           <ion-button @click="logout">
             <ion-icon :icon="logOutOutline" />
@@ -26,7 +26,9 @@
         <ion-item v-for="msg in messages" :key="msg.id">
           <ion-label>
             <div>
-              <strong>{{ msg.from === currentUid ? 'Me' : otherUser?.email }}</strong>
+              <strong>{{
+                msg.from === currentUid ? "Me" : otherUser?.email
+              }}</strong>
             </div>
             <div>{{ msg.text }}</div>
           </ion-label>
@@ -34,9 +36,14 @@
       </ion-list>
       <form @submit.prevent="sendMessage" class="ion-margin-top">
         <ion-item>
-          <ion-input v-model="newMessage" placeholder="Type a message"></ion-input>
+          <ion-input
+            v-model="newMessage"
+            placeholder="Type a message"
+          ></ion-input>
         </ion-item>
-        <ion-button expand="block" type="submit" class="ion-margin-top">Send</ion-button>
+        <ion-button expand="block" type="submit" class="ion-margin-top"
+          >Send</ion-button
+        >
       </form>
     </ion-content>
   </ion-page>
@@ -57,96 +64,122 @@ import {
   IonBackButton,
   IonButtons,
   IonIcon,
-  IonSkeletonText
-} from '@ionic/vue'
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { auth, db } from '@/firebase'
+  IonSkeletonText,
+  IonLoading,
+} from "@ionic/vue";
+import { ref, onMounted, onUnmounted, computed, watch, watchEffect } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { auth, db } from "@/firebase";
 import {
   collection,
   query,
-  where,
   onSnapshot,
   addDoc,
   serverTimestamp,
   doc,
-  getDoc
-} from 'firebase/firestore'
-import { onAuthStateChanged, signOut } from 'firebase/auth'
-import { logOutOutline } from 'ionicons/icons'
+  getDoc,
+  setDoc,
+  orderBy,
+} from "firebase/firestore";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { logOutOutline } from "ionicons/icons";
 
-const route = useRoute()
-const router = useRouter()
-const otherUid = route.params.uid as string
-const currentUid = ref(auth.currentUser?.uid || '')
-const otherUser = ref<any | null>(null)
-const newMessage = ref('')
-const messages = ref<any[]>([])
-const loadingMessages = ref(true)
-const loadingUser = ref(true)
+const route = useRoute();
+const router = useRouter();
+const otherUid = computed(() => route.params.uid as string);
+const currentUid = ref(auth.currentUser?.uid || "");
+const otherUser = ref<any | null>(null);
+const newMessage = ref("");
+const messages = ref<any[]>([]);
+const loadingMessages = ref(true);
+const loadingUser = ref(true);
 
-const chatId = computed(() => [currentUid.value, otherUid].sort().join('_'))
+const chatId = computed(() => [currentUid.value, otherUid.value].sort().join("_"));
+const chatRef = computed(() => doc(db, "chats", chatId.value));
 
-let unsubMessages: (() => void) | null = null
+let unsubMessages: (() => void) | null = null;
+
+async function ensureChat() {
+  const snap = await getDoc(chatRef.value);
+  if (!snap.exists()) {
+    await setDoc(chatRef.value, {
+      participants: [currentUid.value, otherUid.value],
+      createdAt: serverTimestamp(),
+    });
+  }
+}
+
+async function loadOtherUser(uid: string) {
+  loadingUser.value = true;
+  const userSnap = await getDoc(doc(db, "users", uid));
+  if (userSnap.exists()) {
+    otherUser.value = userSnap.data();
+  } else {
+    otherUser.value = null;
+  }
+  loadingUser.value = false;
+}
 
 async function startListener() {
-  if (unsubMessages) unsubMessages()
-  const q = query(collection(db, 'messages'), where('chatId', '==', chatId.value))
-  loadingMessages.value = true
+  if (unsubMessages) unsubMessages();
+  await ensureChat();
+  const q = query(
+    collection(chatRef.value, "messages"),
+    orderBy("createdAt")
+  );
+  loadingMessages.value = true;
   unsubMessages = onSnapshot(q, (snapshot) => {
     messages.value = snapshot.docs
       .map((d) => ({ id: d.id, ...d.data() }))
       .sort((a, b) => {
-        const aTime = (a as any).createdAt?.seconds || 0
-        const bTime = (b as any).createdAt?.seconds || 0
-        return aTime - bTime
-      }) as any[]
-    loadingMessages.value = false
-  })
+        const aTime = (a as any).createdAt?.seconds || 0;
+        const bTime = (b as any).createdAt?.seconds || 0;
+        return aTime - bTime;
+      }) as any[];
+    loadingMessages.value = false;
+  });
 }
 
 onMounted(async () => {
-  const userSnap = await getDoc(doc(db, 'users', otherUid))
-  if (userSnap.exists()) {
-    otherUser.value = userSnap.data()
-  }
-  loadingUser.value = false
+  loadOtherUser(otherUid.value);
 
-  if (currentUid.value) {
-    startListener()
-  } else {
+  if (!currentUid.value) {
     const unsubAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
-        currentUid.value = user.uid
-        startListener()
-        unsubAuth()
+        currentUid.value = user.uid;
+        unsubAuth();
       }
-    })
+    });
   }
-})
+});
 
-watch(currentUid, (uid) => {
-  if (uid) startListener()
-})
+watch(otherUid, (uid) => {
+  loadOtherUser(uid);
+});
+
+watchEffect(() => {
+  if (currentUid.value && otherUid.value) {
+    startListener();
+  }
+});
 
 onUnmounted(() => {
-  if (unsubMessages) unsubMessages()
-})
+  if (unsubMessages) unsubMessages();
+});
 
 async function logout() {
-  await signOut(auth)
-  router.push('/auth')
+  await signOut(auth);
+  router.push("/auth");
 }
 
 async function sendMessage() {
-  if (!newMessage.value.trim()) return
-  await addDoc(collection(db, 'messages'), {
-    chatId: chatId.value,
+  if (!newMessage.value.trim()) return;
+  await ensureChat();
+  await addDoc(collection(chatRef.value, "messages"), {
     from: currentUid.value,
-    to: otherUid,
     text: newMessage.value,
-    createdAt: serverTimestamp()
-  })
-  newMessage.value = ''
+    createdAt: serverTimestamp(),
+  });
+  newMessage.value = "";
 }
 </script>

@@ -8,14 +8,14 @@ vi.mock('@/firebase', () => ({
 }))
 
 const mockMessages = [
-  { id: '1', chatId: 'u1_u2', from: 'u1', to: 'u2', text: 'Hello', createdAt: { seconds: 1 } },
-  { id: '2', chatId: 'u1_u2', from: 'u2', to: 'u1', text: 'Hi there', createdAt: { seconds: 2 } }
+  { id: '1', from: 'u1', text: 'Hello', createdAt: { seconds: 1 } },
+  { id: '2', from: 'u2', text: 'Hi there', createdAt: { seconds: 2 } }
 ]
 
 vi.mock('firebase/firestore', () => ({
   collection: vi.fn(),
   query: vi.fn(),
-  where: vi.fn(),
+  orderBy: vi.fn(),
   onSnapshot: (_q: any, cb: any) => {
     cb({ docs: mockMessages.map((m) => ({ id: m.id, data: () => m })) })
     return vi.fn()
@@ -23,7 +23,8 @@ vi.mock('firebase/firestore', () => ({
   addDoc: vi.fn(),
   serverTimestamp: vi.fn(),
   doc: vi.fn(),
-  getDoc: vi.fn(() => Promise.resolve({ exists: () => true, data: () => ({ email: 'other@example.com' }) }))
+  getDoc: vi.fn(() => Promise.resolve({ exists: () => true, data: () => ({ email: 'other@example.com' }) })),
+  setDoc: vi.fn()
 }))
 
 vi.mock('firebase/auth', () => ({ onAuthStateChanged: vi.fn() }))
