@@ -71,7 +71,7 @@ function openChat(uid: string) {
 
 async function logout() {
   await signOut(auth)
-  router.push('/auth')
+  router.replace('/auth')
 }
 
 onMounted(() => {

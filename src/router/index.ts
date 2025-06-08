@@ -35,12 +35,12 @@ const router = createRouter({
   routes
 })
 
-function getCurrentUser() {
+async function getCurrentUser() {
   const { currentUser, ready } = useAuth()
-  if (currentUser.value) {
-    return Promise.resolve(currentUser.value)
+  if (!currentUser.value) {
+    await ready
   }
-  return ready
+  return currentUser.value
 }
 
 router.beforeEach(async (to, from, next) => {

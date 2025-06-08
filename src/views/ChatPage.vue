@@ -72,13 +72,18 @@ import {
   doc,
   getDoc
 } from 'firebase/firestore'
-import { onAuthStateChanged, signOut } from 'firebase/auth'
+import { signOut } from 'firebase/auth'
+import { useAuth } from '@/store/auth'
 import { logOutOutline } from 'ionicons/icons'
 
 const route = useRoute()
 const router = useRouter()
 const otherUid = route.params.uid as string
-const currentUid = ref(auth.currentUser?.uid || '')
+const { currentUser } = useAuth()
+const currentUid = ref(currentUser.value?.uid || '')
+watch(currentUser, (user) => {
+  currentUid.value = user?.uid || ''
+})
 const otherUser = ref<any | null>(null)
 const newMessage = ref('')
 const messages = ref<any[]>([])
@@ -114,19 +119,16 @@ onMounted(async () => {
 
   if (currentUid.value) {
     startListener()
-  } else {
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        currentUid.value = user.uid
-        startListener()
-        unsubAuth()
-      }
-    })
   }
 })
 
 watch(currentUid, (uid) => {
-  if (uid) startListener()
+  if (uid) {
+    startListener()
+  } else if (unsubMessages) {
+    unsubMessages()
+    unsubMessages = null
+  }
 })
 
 onUnmounted(() => {
@@ -135,7 +137,7 @@ onUnmounted(() => {
 
 async function logout() {
   await signOut(auth)
-  router.push('/auth')
+  router.replace('/auth')
 }
 
 async function sendMessage() {
