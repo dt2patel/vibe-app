@@ -1,6 +1,11 @@
-{
- "name": "App",
- "icons": [
+ {
+  "name": "Vibe App",
+  "short_name": "Vibe",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#3880ff",
+  "background_color": "#ffffff",
+  "icons": [
   {
    "src": "\/android-icon-36x36.png",
    "sizes": "36x36",
