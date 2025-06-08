@@ -25,4 +25,19 @@
 ## Setup & Testing
 - Always run `npm install` before any other command.
 - Lint code with `npm run lint`.
-- (Optional) Run tests with `npm run test`.
+ 
+## Test Users for Automated Testing
+
+- Use the following environment variables to specify test users for authentication and chat tests:
+  - `TEST_USER_EMAIL` / `TEST_USER_PASSWORD`: The primary test user (sender).
+  - `TEST_RECIPIENT_EMAIL` / `TEST_RECIPIENT_PASSWORD`: The recipient test user.
+- Always use these credentials when writing tests or automated scripts involving chat flows (sending, receiving, querying chat history).
+- Do **not** hardcode these credentials; always read from environment variables.
+- Example usage:
+
+  ```js
+  const senderEmail = process.env.TEST_USER_EMAIL;
+  const senderPassword = process.env.TEST_USER_PASSWORD;
+  const recipientEmail = process.env.TEST_RECIPIENT_EMAIL;
+  const recipientPassword = process.env.TEST_RECIPIENT_PASSWORD;
+  // Use these for chat tests: sender sends, recipient receives
