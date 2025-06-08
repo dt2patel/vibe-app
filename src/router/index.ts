@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from '@ionic/vue-router'
 import { RouteRecordRaw } from 'vue-router'
-import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/firebase'
+import { useAuth } from '@/store/auth'
 import AuthPage from '../views/AuthPage.vue'
 import UserListPage from '../views/UserListPage.vue'
 import ChatPage from '../views/ChatPage.vue'
@@ -19,12 +19,14 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/users',
     name: 'Users',
-    component: UserListPage
+    component: UserListPage,
+    meta: { requiresAuth: true }
   },
   {
     path: '/chat/:uid',
     name: 'Chat',
-    component: ChatPage
+    component: ChatPage,
+    meta: { requiresAuth: true }
   }
 ]
 
@@ -33,21 +35,16 @@ const router = createRouter({
   routes
 })
 
-function getCurrentUser() {
-  return new Promise<any>((resolve, reject) => {
-    const removeListener = onAuthStateChanged(
-      auth,
-      (user) => {
-        removeListener()
-        resolve(user)
-      },
-      reject
-    )
-  })
+async function getCurrentUser() {
+  const { currentUser, ready } = useAuth()
+  if (!currentUser.value) {
+    await ready
+  }
+  return currentUser.value
 }
 
 router.beforeEach(async (to, from, next) => {
-  if (to.name === 'Auth') {
+  if (!to.matched.some((record) => record.meta.requiresAuth)) {
     return next()
   }
 
