@@ -33,3 +33,4 @@ npm-debug.log*
 
 .env
 .firebase
+node_modules/
