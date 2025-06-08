@@ -93,21 +93,47 @@ const loadingUser = ref(true)
 const chatId = computed(() => [currentUid.value, otherUid].sort().join('_'))
 
 let unsubMessages: (() => void) | null = null
+let fromMessages: any[] = []
+let toMessages: any[] = []
+
+function updateCombined() {
+  messages.value = [...fromMessages, ...toMessages]
+    .sort((a, b) => {
+      const aTime = (a as any).createdAt?.seconds || 0
+      const bTime = (b as any).createdAt?.seconds || 0
+      return aTime - bTime
+    }) as any[]
+  loadingMessages.value = false
+}
 
 async function startListener() {
   if (unsubMessages) unsubMessages()
-  const q = query(collection(db, 'messages'), where('chatId', '==', chatId.value))
   loadingMessages.value = true
-  unsubMessages = onSnapshot(q, (snapshot) => {
-    messages.value = snapshot.docs
-      .map((d) => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => {
-        const aTime = (a as any).createdAt?.seconds || 0
-        const bTime = (b as any).createdAt?.seconds || 0
-        return aTime - bTime
-      }) as any[]
-    loadingMessages.value = false
+  fromMessages = []
+  toMessages = []
+  const sentQ = query(
+    collection(db, 'messages'),
+    where('from', '==', currentUid.value),
+    where('to', '==', otherUid)
+  )
+  const receivedQ = query(
+    collection(db, 'messages'),
+    where('from', '==', otherUid),
+    where('to', '==', currentUid.value)
+  )
+
+  const unsubSent = onSnapshot(sentQ, (snapshot) => {
+    fromMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+    updateCombined()
   })
+  const unsubReceived = onSnapshot(receivedQ, (snapshot) => {
+    toMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+    updateCombined()
+  })
+  unsubMessages = () => {
+    unsubSent()
+    unsubReceived()
+  }
 }
 
 onMounted(async () => {
