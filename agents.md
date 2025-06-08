@@ -9,22 +9,16 @@
 ## Coding Conventions
 - Use Vue 3 Composition API.
 - Write components in `.vue` single-file format.
-- Follow Prettier code style (run `npm run lint --fix`).
 
 ## How to Add Features
 - For new pages, create a folder in `src/views/`.
 - Register new routes in `src/router/index.js`.
-- Add navigation links in `src/components/SideMenu.vue`.
 
 ## Branch & PR Process
 - Create a new branch for each feature or fix.
 - Use branch naming: `feature/<short-description>` or `fix/<short-description>`.
 - Open a PR to `main` with a clear description of changes.
 - Link relevant issues (if any).
-
-## Setup & Testing
-- Always run `npm install` before any other command.
-- Lint code with `npm run lint`.
 
 ## Test Users for Automated Testing
 
@@ -41,3 +35,4 @@
   const recipientEmail = process.env.TEST_RECIPIENT_EMAIL;
   const recipientPassword = process.env.TEST_RECIPIENT_PASSWORD;
   // Use these for chat tests: sender sends, recipient receives
+  ```
