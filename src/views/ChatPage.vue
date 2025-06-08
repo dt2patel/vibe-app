@@ -15,6 +15,9 @@
     </ion-header>
     <ion-content class="ion-padding">
       <ion-loading :is-open="loadingUser" message="Loading chat..." />
+      <ion-text color="danger" v-if="errorMessage" class="ion-padding">
+        <p>{{ errorMessage }}</p>
+      </ion-text>
       <ion-list v-if="loadingMessages">
         <ion-item v-for="n in 5" :key="n">
           <ion-label>
@@ -54,6 +57,7 @@ import {
   IonButton,
   IonList,
   IonLabel,
+  IonText,
   IonBackButton,
   IonButtons,
   IonIcon,
@@ -89,6 +93,7 @@ const newMessage = ref('')
 const messages = ref<any[]>([])
 const loadingMessages = ref(true)
 const loadingUser = ref(true)
+const errorMessage = ref<string | null>(null)
 
 const chatId = computed(() => [currentUid.value, otherUid].sort().join('_'))
 
@@ -109,6 +114,7 @@ function updateCombined() {
 async function startListener() {
   if (unsubMessages) unsubMessages()
   loadingMessages.value = true
+  errorMessage.value = null
   fromMessages = []
   toMessages = []
   const sentQ = query(
@@ -122,14 +128,34 @@ async function startListener() {
     where('to', '==', currentUid.value)
   )
 
-  const unsubSent = onSnapshot(sentQ, (snapshot) => {
-    fromMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
-    updateCombined()
-  })
-  const unsubReceived = onSnapshot(receivedQ, (snapshot) => {
-    toMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
-    updateCombined()
-  })
+  const unsubSent = onSnapshot(
+    sentQ,
+    {
+      next: (snapshot) => {
+        fromMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+        updateCombined()
+      },
+      error: (err) => {
+        console.error('Error fetching sent messages', err)
+        errorMessage.value = 'Error loading chat messages'
+        loadingMessages.value = false
+      }
+    }
+  )
+  const unsubReceived = onSnapshot(
+    receivedQ,
+    {
+      next: (snapshot) => {
+        toMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+        updateCombined()
+      },
+      error: (err) => {
+        console.error('Error fetching received messages', err)
+        errorMessage.value = 'Error loading chat messages'
+        loadingMessages.value = false
+      }
+    }
+  )
   unsubMessages = () => {
     unsubSent()
     unsubReceived()
@@ -137,11 +163,17 @@ async function startListener() {
 }
 
 onMounted(async () => {
-  const userSnap = await getDoc(doc(db, 'users', otherUid))
-  if (userSnap.exists()) {
-    otherUser.value = userSnap.data()
+  try {
+    const userSnap = await getDoc(doc(db, 'users', otherUid))
+    if (userSnap.exists()) {
+      otherUser.value = userSnap.data()
+    }
+  } catch (err) {
+    console.error('Failed to load chat user', err)
+    errorMessage.value = 'Error loading chat user'
+  } finally {
+    loadingUser.value = false
   }
-  loadingUser.value = false
 
   if (currentUid.value) {
     startListener()
