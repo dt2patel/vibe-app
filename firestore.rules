@@ -7,7 +7,11 @@ service cloud.firestore {
     }
 
     match /messages/{messageId} {
-      allow read: if request.auth != null && (request.auth.uid == resource.data.from || request.auth.uid == resource.data.to);
+      function userInChat() {
+        return resource.data.chatId.matches('^' + request.auth.uid + '_.*$') ||
+               resource.data.chatId.matches('^.*_' + request.auth.uid + '$');
+      }
+      allow read: if request.auth != null && userInChat();
       allow create: if request.auth != null && request.auth.uid == request.resource.data.from && (request.resource.data.from == request.auth.uid || request.resource.data.to == request.auth.uid);
       allow update, delete: if false;
     }
