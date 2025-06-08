@@ -1,0 +1,17 @@
+steps:
+  - name: Install Dependencies
+    run: |
+      apt-get update && apt-get install -y xvfb
+      npm install
+      npx cypress install
+
+  - name: Lint and Build
+    run: |
+      npm run lint
+      npm run build
+
+  - name: Run Dev Server and Cypress Tests
+    run: |
+      npm run dev & 
+      sleep 30
+      npm run test:e2e
