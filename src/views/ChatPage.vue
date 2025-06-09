@@ -70,11 +70,13 @@ import {
   collection,
   query,
   where,
+  orderBy,
   onSnapshot,
   addDoc,
   serverTimestamp,
   doc,
-  getDoc
+  getDoc,
+  type Timestamp
 } from 'firebase/firestore'
 import { signOut } from 'firebase/auth'
 import { useAuth } from '@/store/auth'
@@ -88,9 +90,19 @@ const currentUid = ref(currentUser.value?.uid || '')
 watch(currentUser, (user) => {
   currentUid.value = user?.uid || ''
 })
-const otherUser = ref<any | null>(null)
+interface ChatUser { uid: string; email: string }
+interface ChatMessage {
+  id: string
+  chatId: string
+  from: string
+  to: string
+  text: string
+  createdAt?: Timestamp
+}
+
+const otherUser = ref<ChatUser | null>(null)
 const newMessage = ref('')
-const messages = ref<any[]>([])
+const messages = ref<ChatMessage[]>([])
 const loadingMessages = ref(true)
 const loadingUser = ref(true)
 const errorMessage = ref<string | null>(null)
@@ -98,75 +110,37 @@ const errorMessage = ref<string | null>(null)
 const chatId = computed(() => [currentUid.value, otherUid].sort().join('_'))
 
 let unsubMessages: (() => void) | null = null
-let fromMessages: any[] = []
-let toMessages: any[] = []
-
-function updateCombined() {
-  messages.value = [...fromMessages, ...toMessages]
-    .sort((a, b) => {
-      const aTime = (a as any).createdAt?.seconds || 0
-      const bTime = (b as any).createdAt?.seconds || 0
-      return aTime - bTime
-    }) as any[]
-  loadingMessages.value = false
-}
 
 async function startListener() {
   if (unsubMessages) unsubMessages()
   loadingMessages.value = true
   errorMessage.value = null
-  fromMessages = []
-  toMessages = []
-  const sentQ = query(
+  const q = query(
     collection(db, 'messages'),
-    where('from', '==', currentUid.value),
-    where('to', '==', otherUid)
+    where('chatId', '==', chatId.value),
+    orderBy('createdAt')
   )
-  const receivedQ = query(
-    collection(db, 'messages'),
-    where('from', '==', otherUid),
-    where('to', '==', currentUid.value)
-  )
-
-  const unsubSent = onSnapshot(
-    sentQ,
-    {
-      next: (snapshot) => {
-        fromMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
-        updateCombined()
-      },
-      error: (err) => {
-        console.error('Error fetching sent messages', err)
-        errorMessage.value = 'Error loading chat messages'
-        loadingMessages.value = false
-      }
+  unsubMessages = onSnapshot(q, {
+    next: (snapshot) => {
+      messages.value = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<ChatMessage, 'id'>)
+      }))
+      loadingMessages.value = false
+    },
+    error: (err) => {
+      console.error('Error fetching chat messages', err)
+      errorMessage.value = 'Error loading chat messages'
+      loadingMessages.value = false
     }
-  )
-  const unsubReceived = onSnapshot(
-    receivedQ,
-    {
-      next: (snapshot) => {
-        toMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
-        updateCombined()
-      },
-      error: (err) => {
-        console.error('Error fetching received messages', err)
-        errorMessage.value = 'Error loading chat messages'
-        loadingMessages.value = false
-      }
-    }
-  )
-  unsubMessages = () => {
-    unsubSent()
-    unsubReceived()
-  }
+  })
 }
 
 onMounted(async () => {
   try {
     const userSnap = await getDoc(doc(db, 'users', otherUid))
     if (userSnap.exists()) {
-      otherUser.value = userSnap.data()
+      otherUser.value = userSnap.data() as ChatUser
     }
   } catch (err) {
     console.error('Failed to load chat user', err)
