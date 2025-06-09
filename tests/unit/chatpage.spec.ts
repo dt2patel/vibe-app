@@ -17,7 +17,8 @@ vi.mock('firebase/firestore', () => ({
   query: vi.fn(),
   where: vi.fn(),
   onSnapshot: (_q: any, cb: any) => {
-    cb({ docs: mockMessages.map((m) => ({ id: m.id, data: () => m })) })
+    const next = typeof cb === 'function' ? cb : cb.next
+    next({ docs: mockMessages.map((m) => ({ id: m.id, data: () => m })) })
     return vi.fn()
   },
   addDoc: vi.fn(),
@@ -46,6 +47,7 @@ describe('ChatPage', () => {
           IonLabel: slotStub,
           IonLoading: slotStub,
           IonSkeletonText: slotStub,
+          IonText: slotStub,
           IonBackButton: slotStub,
           IonButtons: slotStub,
           IonIcon: slotStub,
@@ -72,6 +74,7 @@ describe('ChatPage', () => {
           IonLabel: slotStub,
           IonLoading: slotStub,
           IonSkeletonText: slotStub,
+          IonText: slotStub,
           IonBackButton: slotStub,
           IonButtons: slotStub,
           IonIcon: slotStub,
