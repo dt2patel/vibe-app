@@ -8,7 +8,7 @@
     <ion-content class="ion-padding">
       <ion-item>
         <ion-label>Enable push notifications</ion-label>
-        <ion-toggle
+        <ion-toggle slot="end"
           :disabled="!pushSupported"
           :checked="pushEnabled"
           @ionChange="togglePush"
