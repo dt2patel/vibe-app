@@ -6,6 +6,7 @@
   "theme_color": "#3880ff",
   "background_color": "#ffffff",
   "scope": "/",
+  "gcm_sender_id":"239622399533",
   "icons": [
   {
    "src": "\/android-icon-36x36.png",
