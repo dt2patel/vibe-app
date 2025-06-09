@@ -128,33 +128,27 @@ async function startListener() {
     where('to', '==', currentUid.value)
   )
 
+  const onSnapshotError = (err: unknown) => {
+    console.error('Firestore onSnapshot error', err)
+    loadingMessages.value = false
+    errorMessage.value = 'Failed to load messages'
+  }
+
   const unsubSent = onSnapshot(
     sentQ,
-    {
-      next: (snapshot) => {
-        fromMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
-        updateCombined()
-      },
-      error: (err) => {
-        console.error('Error fetching sent messages', err)
-        errorMessage.value = 'Error loading chat messages'
-        loadingMessages.value = false
-      }
-    }
+    (snapshot) => {
+      fromMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+      updateCombined()
+    },
+    onSnapshotError
   )
   const unsubReceived = onSnapshot(
     receivedQ,
-    {
-      next: (snapshot) => {
-        toMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
-        updateCombined()
-      },
-      error: (err) => {
-        console.error('Error fetching received messages', err)
-        errorMessage.value = 'Error loading chat messages'
-        loadingMessages.value = false
-      }
-    }
+    (snapshot) => {
+      toMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+      updateCombined()
+    },
+    onSnapshotError
   )
   unsubMessages = () => {
     unsubSent()
