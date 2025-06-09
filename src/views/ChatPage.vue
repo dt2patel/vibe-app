@@ -155,6 +155,7 @@ function handleOnline() {
 }
 function handleOffline() {
   isOffline.value = true
+  loadingMessages.value = false
 }
 
 window.addEventListener('online', handleOnline)
@@ -193,10 +194,26 @@ function loadCache() {
       storedMessages.value = arr.filter((m: any) => m.status !== 'queued')
       queuedMessages.value = arr
         .filter((m: any) => m.status === 'queued')
-        .map((m: any) => ({ ...m, status: undefined }))
+        .map((m: any) => {
+          const { status: _status } = m
+          void _status
+          const rest = { ...m }
+          delete (rest as any).status
+          syncStatus[m.id] = { pending: true, showConfirm: false }
+          return rest
+        })
+      storedMessages.value.forEach((m: any) => {
+        syncStatus[m.id] = syncStatus[m.id] || {
+          pending: false,
+          showConfirm: false
+        }
+      })
     } catch (err) {
       console.warn('Failed to parse chat cache', err)
     }
+  }
+  if (!navigator.onLine) {
+    loadingMessages.value = false
   }
 }
 
