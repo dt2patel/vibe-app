@@ -247,6 +247,12 @@ async function startListener() {
     where('to', '==', currentUid.value)
   )
 
+  const onSnapshotError = (err: unknown) => {
+    console.error('Firestore onSnapshot error', err)
+    loadingMessages.value = false
+    errorMessage.value = 'Failed to load messages'
+  }
+
   const unsubSent = onSnapshot(
     sentQ,
     {
