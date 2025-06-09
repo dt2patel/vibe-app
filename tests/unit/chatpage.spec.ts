@@ -45,7 +45,6 @@ describe('ChatPage', () => {
           IonList: slotStub,
           IonItem: slotStub,
           IonLabel: slotStub,
-          IonLoading: slotStub,
           IonSkeletonText: slotStub,
           IonText: slotStub,
           IonBackButton: slotStub,
@@ -56,7 +55,8 @@ describe('ChatPage', () => {
           IonChip: slotStub,
           IonItemSliding: slotStub,
           IonItemOptions: slotStub,
-          IonItemOption: slotStub
+          IonItemOption: slotStub,
+          IonSpinner: slotStub
         }
       }
     })
@@ -76,7 +76,6 @@ describe('ChatPage', () => {
           IonList: slotStub,
           IonItem: slotStub,
           IonLabel: slotStub,
-          IonLoading: slotStub,
           IonSkeletonText: slotStub,
           IonText: slotStub,
           IonBackButton: slotStub,
@@ -87,7 +86,8 @@ describe('ChatPage', () => {
           IonChip: slotStub,
           IonItemSliding: slotStub,
           IonItemOptions: slotStub,
-          IonItemOption: slotStub
+          IonItemOption: slotStub,
+          IonSpinner: slotStub
         }
       }
     })
