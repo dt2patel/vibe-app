@@ -95,4 +95,42 @@ describe('ChatPage', () => {
     await flushPromises()
     expect((wrapper.vm as any).loadingMessages).toBe(false)
   })
+
+  test('shows queued message when sending fails', async () => {
+    const slotStub = { template: '<div><slot /></div>' }
+    const firestore = await import('firebase/firestore')
+    ;(firestore.addDoc as any).mockImplementation(() => Promise.reject(new Error('offline')))
+    Object.defineProperty(window.navigator, 'onLine', {
+      value: false,
+      configurable: true
+    })
+    const wrapper = shallowMount(ChatPage, {
+      global: {
+        stubs: {
+          IonPage: slotStub,
+          IonContent: slotStub,
+          IonList: slotStub,
+          IonItem: slotStub,
+          IonLabel: slotStub,
+          IonSkeletonText: slotStub,
+          IonText: slotStub,
+          IonBackButton: slotStub,
+          IonButtons: slotStub,
+          IonIcon: slotStub,
+          IonInput: slotStub,
+          IonButton: slotStub,
+          IonChip: slotStub,
+          IonItemSliding: slotStub,
+          IonItemOptions: slotStub,
+          IonItemOption: slotStub,
+          IonSpinner: slotStub
+        }
+      }
+    })
+    await flushPromises()
+    ;(wrapper.vm as any).newMessage = 'Queued'
+    await (wrapper.vm as any).sendMessage()
+    await flushPromises()
+    expect(wrapper.text()).toContain('Queued')
+  })
 })

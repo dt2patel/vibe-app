@@ -334,15 +334,22 @@ onMounted(async () => {
   }
 })
 
-watch(currentUid, (uid) => {
-  if (uid && navigator.onLine) {
-    startListener()
-  } else if (unsubMessages) {
-    unsubMessages()
-    unsubMessages = null
+  let msgId = ''
+  try {
+    const ref = await addDoc(collection(db, 'messages'), {
+      chatId: chatId.value,
+      from: currentUid.value,
+      to: otherUid,
+      text,
+      createdAt: serverTimestamp()
+    })
+    msgId = ref.id
+  } catch (err) {
+    console.warn('Failed to send message, queuing locally', err)
+    msgId = `local_${Date.now()}`
   }
-})
-
+    id: msgId,
+  syncStatus[msgId] = { pending: true, showConfirm: false }
 watch(isOffline, (offline) => {
   if (!offline && currentUid.value && !unsubMessages) {
     startListener()
