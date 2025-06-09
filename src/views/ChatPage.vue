@@ -18,6 +18,9 @@
       <ion-text color="danger" v-if="errorMessage" class="ion-padding">
         <p>{{ errorMessage }}</p>
       </ion-text>
+      <ion-chip color="warning" v-if="isOffline">
+        Offline - messages will sync when online
+      </ion-chip>
       <ion-list v-if="loadingMessages">
         <ion-item v-for="n in 5" :key="n">
           <ion-label>
@@ -26,14 +29,31 @@
         </ion-item>
       </ion-list>
       <ion-list v-else>
-        <ion-item v-for="msg in messages" :key="msg.id">
-          <ion-label>
-            <div>
-              <strong>{{ msg.from === currentUid ? 'Me' : otherUser?.email }}</strong>
-            </div>
-            <div>{{ msg.text }}</div>
-          </ion-label>
-        </ion-item>
+        <ion-item-sliding v-for="msg in messages" :key="msg.id">
+          <ion-item>
+            <ion-label>
+              <div>
+                <strong>{{ msg.from === currentUid ? 'Me' : otherUser?.email }}</strong>
+                <ion-icon
+                  :icon="timeOutline"
+                  v-if="syncStatus[msg.id]?.pending"
+                  class="status-icon"
+                />
+                <ion-icon
+                  :icon="checkmarkCircleOutline"
+                  v-if="syncStatus[msg.id]?.showConfirm"
+                  class="status-icon"
+                />
+              </div>
+              <div>{{ msg.text }}</div>
+            </ion-label>
+          </ion-item>
+          <ion-item-options side="end">
+            <ion-item-option color="light">
+              {{ formatTime(msg.createdAt) }}
+            </ion-item-option>
+          </ion-item-options>
+        </ion-item-sliding>
       </ion-list>
       <form @submit.prevent="sendMessage" class="ion-margin-top">
         <ion-item>
@@ -61,9 +81,13 @@ import {
   IonBackButton,
   IonButtons,
   IonIcon,
-  IonSkeletonText
+  IonSkeletonText,
+  IonChip,
+  IonItemSliding,
+  IonItemOptions,
+  IonItemOption
 } from '@ionic/vue'
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { auth, db } from '@/firebase'
 import {
@@ -78,7 +102,11 @@ import {
 } from 'firebase/firestore'
 import { signOut } from 'firebase/auth'
 import { useAuth } from '@/store/auth'
-import { logOutOutline } from 'ionicons/icons'
+import {
+  logOutOutline,
+  timeOutline,
+  checkmarkCircleOutline
+} from 'ionicons/icons'
 
 const route = useRoute()
 const router = useRouter()
@@ -94,6 +122,23 @@ const messages = ref<any[]>([])
 const loadingMessages = ref(true)
 const loadingUser = ref(true)
 const errorMessage = ref<string | null>(null)
+const isOffline = ref(!navigator.onLine)
+
+function handleOnline() {
+  isOffline.value = false
+}
+function handleOffline() {
+  isOffline.value = true
+}
+
+window.addEventListener('online', handleOnline)
+window.addEventListener('offline', handleOffline)
+
+interface SyncState {
+  pending: boolean
+  showConfirm: boolean
+}
+const syncStatus = reactive<Record<string, SyncState>>({})
 
 const chatId = computed(() => [currentUid.value, otherUid].sort().join('_'))
 
@@ -132,7 +177,19 @@ async function startListener() {
     sentQ,
     {
       next: (snapshot) => {
-        fromMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+        fromMessages = snapshot.docs.map((d) => {
+          const data = { id: d.id, ...d.data() }
+          const status = syncStatus[data.id] || { pending: false, showConfirm: false }
+          if (d.metadata && d.metadata.hasPendingWrites) {
+            status.pending = true
+          } else if (status.pending) {
+            status.pending = false
+            status.showConfirm = true
+            setTimeout(() => (status.showConfirm = false), 3000)
+          }
+          syncStatus[data.id] = status
+          return data
+        })
         updateCombined()
       },
       error: (err) => {
@@ -146,7 +203,11 @@ async function startListener() {
     receivedQ,
     {
       next: (snapshot) => {
-        toMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+        toMessages = snapshot.docs.map((d) => {
+          const data = { id: d.id, ...d.data() }
+          syncStatus[data.id] = syncStatus[data.id] || { pending: false, showConfirm: false }
+          return data
+        })
         updateCombined()
       },
       error: (err) => {
@@ -191,6 +252,8 @@ watch(currentUid, (uid) => {
 
 onUnmounted(() => {
   if (unsubMessages) unsubMessages()
+  window.removeEventListener('online', handleOnline)
+  window.removeEventListener('offline', handleOffline)
 })
 
 async function logout() {
@@ -208,5 +271,11 @@ async function sendMessage() {
     createdAt: serverTimestamp()
   })
   newMessage.value = ''
+}
+
+function formatTime(ts: any) {
+  if (!ts?.seconds) return ''
+  const date = new Date(ts.seconds * 1000)
+  return date.toLocaleTimeString()
 }
 </script>

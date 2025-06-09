@@ -52,7 +52,11 @@ describe('ChatPage', () => {
           IonButtons: slotStub,
           IonIcon: slotStub,
           IonInput: slotStub,
-          IonButton: slotStub
+          IonButton: slotStub,
+          IonChip: slotStub,
+          IonItemSliding: slotStub,
+          IonItemOptions: slotStub,
+          IonItemOption: slotStub
         }
       }
     })
@@ -79,7 +83,11 @@ describe('ChatPage', () => {
           IonButtons: slotStub,
           IonIcon: slotStub,
           IonInput: slotStub,
-          IonButton: slotStub
+          IonButton: slotStub,
+          IonChip: slotStub,
+          IonItemSliding: slotStub,
+          IonItemOptions: slotStub,
+          IonItemOption: slotStub
         }
       }
     })
