@@ -3,14 +3,10 @@
     <ion-header>
       <ion-toolbar>
         <ion-title>Users</ion-title>
-        <ion-buttons slot="end">
-          <ion-button @click="logout">
-            <ion-icon :icon="logOutOutline" />
-          </ion-button>
-        </ion-buttons>
+        
       </ion-toolbar>
     </ion-header>
-    <ion-content class="ion-padding">
+  <ion-content class="ion-padding">
       <ion-list v-if="loading">
         <ion-item v-for="n in 5" :key="n">
           <ion-skeleton-text animated style="width: 100%" />
@@ -23,9 +19,19 @@
           button
           @click="openChat(user.uid)"
         >
-          {{ user.email }}
+          <ion-label class="ion-text-wrap">
+            <h2>{{ user.email }}</h2>
+            <p v-if="lastMessages[user.uid]">{{ lastMessages[user.uid] }}</p>
+          </ion-label>
+          <ion-badge slot="end" v-if="unread.has(user.uid)">1</ion-badge>
         </ion-item>
       </ion-list>
+      <ion-toast
+        :is-open="toastOpen"
+        :message="toastMessage"
+        @didDismiss="toastOpen = false"
+        position="top"
+      />
     </ion-content>
   </ion-page>
 </template>
@@ -40,20 +46,23 @@ import {
   IonList,
   IonItem,
   IonSkeletonText,
-  IonButtons,
-  IonButton,
-  IonIcon
+  IonLabel,
+  IonBadge,
+  IonToast
 } from '@ionic/vue'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth, db } from '@/firebase'
 import { collection, getDocs } from 'firebase/firestore'
-import { signOut } from 'firebase/auth'
-import { logOutOutline } from 'ionicons/icons'
+import { listenToForegroundMessages } from '@/hooks/useNotifications'
 
 const router = useRouter()
 const users = ref<any[]>([])
 const loading = ref(true)
+const lastMessages = reactive<Record<string, string>>({})
+const unread = reactive<Set<string>>(new Set())
+const toastOpen = ref(false)
+const toastMessage = ref('')
 
 async function loadUsers() {
   loading.value = true
@@ -67,15 +76,32 @@ async function loadUsers() {
 
 function openChat(uid: string) {
   router.push(`/chat/${uid}`)
+  unread.delete(uid)
 }
 
-async function logout() {
-  await signOut(auth)
-  router.replace('/auth')
+function showToast(msg: string) {
+  toastMessage.value = msg
+  toastOpen.value = true
 }
+
+let unsub: (() => void) | null = null
 
 onMounted(() => {
   loadUsers()
+  unsub = listenToForegroundMessages((payload: any) => {
+    const from = payload.data?.from
+    const text = payload.data?.text
+    const sender = payload.data?.senderName
+    if (from && text) {
+      lastMessages[from] = text
+      unread.add(from)
+      showToast(`${sender || 'New message'}: ${text}`)
+    }
+  })
+})
+
+onUnmounted(() => {
+  if (unsub) unsub()
 })
 </script>
 

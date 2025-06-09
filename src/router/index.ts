@@ -5,6 +5,8 @@ import { useAuth } from '@/store/auth'
 import AuthPage from '../views/AuthPage.vue'
 import UserListPage from '../views/UserListPage.vue'
 import ChatPage from '../views/ChatPage.vue'
+import SettingsPage from '../views/SettingsPage.vue'
+import TabsPage from '../views/TabsPage.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -17,10 +19,25 @@ const routes: Array<RouteRecordRaw> = [
     component: AuthPage
   },
   {
-    path: '/users',
-    name: 'Users',
-    component: UserListPage,
-    meta: { requiresAuth: true }
+    path: '/tabs/',
+    component: TabsPage,
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        redirect: '/tabs/users'
+      },
+      {
+        path: 'users',
+        name: 'Users',
+        component: UserListPage
+      },
+      {
+        path: 'settings',
+        name: 'Settings',
+        component: SettingsPage
+      }
+    ]
   },
   {
     path: '/chat/:uid',
