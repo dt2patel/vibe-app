@@ -74,7 +74,10 @@ import {
   addDoc,
   serverTimestamp,
   doc,
-  getDoc
+  getDoc,
+  getDocs,
+  orderBy,
+  limit
 } from 'firebase/firestore'
 import { signOut } from 'firebase/auth'
 import { useAuth } from '@/store/auth'
@@ -100,6 +103,30 @@ const chatId = computed(() => [currentUid.value, otherUid].sort().join('_'))
 let unsubMessages: (() => void) | null = null
 let fromMessages: any[] = []
 let toMessages: any[] = []
+let snapshotTimeout: ReturnType<typeof setTimeout> | null = null
+
+async function fetchLastMessages() {
+  try {
+    const snap = await getDocs(
+      query(
+        collection(db, 'messages'),
+        where('chatId', '==', chatId.value),
+        orderBy('createdAt', 'desc'),
+        limit(50)
+      )
+    )
+    messages.value = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => {
+        const aTime = (a as any).createdAt?.seconds || 0
+        const bTime = (b as any).createdAt?.seconds || 0
+        return aTime - bTime
+      }) as any[]
+  } catch (err) {
+    console.error('Failed to fetch fallback messages', err)
+    errorMessage.value = 'Error loading chat messages'
+  }
+}
 
 function updateCombined() {
   messages.value = [...fromMessages, ...toMessages]
@@ -117,6 +144,10 @@ async function startListener() {
   errorMessage.value = null
   fromMessages = []
   toMessages = []
+  if (snapshotTimeout) {
+    clearTimeout(snapshotTimeout)
+    snapshotTimeout = null
+  }
   const sentQ = query(
     collection(db, 'messages'),
     where('from', '==', currentUid.value),
@@ -127,36 +158,55 @@ async function startListener() {
     where('from', '==', otherUid),
     where('to', '==', currentUid.value)
   )
+  let firstSnapshot = false
+
+  const onSnapshotError = (err: unknown) => {
+    console.error('Firestore onSnapshot error', err)
+    loadingMessages.value = false
+    errorMessage.value = 'Failed to load messages'
+  }
 
   const unsubSent = onSnapshot(
     sentQ,
-    {
-      next: (snapshot) => {
-        fromMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
-        updateCombined()
-      },
-      error: (err) => {
-        console.error('Error fetching sent messages', err)
-        errorMessage.value = 'Error loading chat messages'
-        loadingMessages.value = false
+    (snapshot) => {
+      firstSnapshot = true
+      if (snapshotTimeout) {
+        clearTimeout(snapshotTimeout)
+        snapshotTimeout = null
       }
-    }
+      fromMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+      updateCombined()
+    },
+    onSnapshotError
   )
   const unsubReceived = onSnapshot(
     receivedQ,
-    {
-      next: (snapshot) => {
-        toMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
-        updateCombined()
-      },
-      error: (err) => {
-        console.error('Error fetching received messages', err)
-        errorMessage.value = 'Error loading chat messages'
-        loadingMessages.value = false
+    (snapshot) => {
+      firstSnapshot = true
+      if (snapshotTimeout) {
+        clearTimeout(snapshotTimeout)
+        snapshotTimeout = null
       }
-    }
+      toMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+      updateCombined()
+    },
+    onSnapshotError
   )
+  snapshotTimeout = setTimeout(async () => {
+    if (!firstSnapshot) {
+      unsubSent()
+      unsubReceived()
+      unsubMessages = null
+      loadingMessages.value = false
+      await fetchLastMessages()
+    }
+  }, 10000)
+
   unsubMessages = () => {
+    if (snapshotTimeout) {
+      clearTimeout(snapshotTimeout)
+      snapshotTimeout = null
+    }
     unsubSent()
     unsubReceived()
   }
