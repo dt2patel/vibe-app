@@ -3,14 +3,9 @@
     <ion-header>
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button default-href="/users" />
+          <ion-back-button default-href="/tabs/users" />
         </ion-buttons>
         <ion-title>{{ otherUser?.email || 'Chat' }}</ion-title>
-        <ion-buttons slot="end">
-          <ion-button @click="logout">
-            <ion-icon :icon="logOutOutline" />
-          </ion-button>
-        </ion-buttons>
       </ion-toolbar>
     </ion-header>
     <ion-content class="ion-padding">
@@ -41,6 +36,12 @@
         </ion-item>
         <ion-button expand="block" type="submit" class="ion-margin-top">Send</ion-button>
       </form>
+      <ion-toast
+        :is-open="toastOpen"
+        :message="toastMessage"
+        @didDismiss="toastOpen = false"
+        position="top"
+      />
     </ion-content>
   </ion-page>
 </template>
@@ -60,12 +61,12 @@ import {
   IonText,
   IonBackButton,
   IonButtons,
-  IonIcon,
-  IonSkeletonText
+  IonSkeletonText,
+  IonToast
 } from '@ionic/vue'
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { auth, db } from '@/firebase'
+import { useRoute } from 'vue-router'
+import { db } from '@/firebase'
 import {
   collection,
   query,
@@ -76,12 +77,10 @@ import {
   doc,
   getDoc
 } from 'firebase/firestore'
-import { signOut } from 'firebase/auth'
 import { useAuth } from '@/store/auth'
-import { logOutOutline } from 'ionicons/icons'
+import { listenToForegroundMessages } from '@/hooks/useNotifications'
 
 const route = useRoute()
-const router = useRouter()
 const otherUid = route.params.uid as string
 const { currentUser } = useAuth()
 const currentUid = ref(currentUser.value?.uid || '')
@@ -94,6 +93,8 @@ const messages = ref<any[]>([])
 const loadingMessages = ref(true)
 const loadingUser = ref(true)
 const errorMessage = ref<string | null>(null)
+const toastOpen = ref(false)
+const toastMessage = ref('')
 
 const chatId = computed(() => [currentUid.value, otherUid].sort().join('_'))
 
@@ -178,6 +179,14 @@ onMounted(async () => {
   if (currentUid.value) {
     startListener()
   }
+  listenToForegroundMessages((payload: any) => {
+    const from = payload.data?.from
+    const text = payload.data?.text
+    const sender = payload.data?.senderName
+    if (from && from !== otherUid && text) {
+      showToast(`${sender || 'New message'}: ${text}`)
+    }
+  })
 })
 
 watch(currentUid, (uid) => {
@@ -193,11 +202,6 @@ onUnmounted(() => {
   if (unsubMessages) unsubMessages()
 })
 
-async function logout() {
-  await signOut(auth)
-  router.replace('/auth')
-}
-
 async function sendMessage() {
   if (!newMessage.value.trim()) return
   await addDoc(collection(db, 'messages'), {
@@ -208,5 +212,10 @@ async function sendMessage() {
     createdAt: serverTimestamp()
   })
   newMessage.value = ''
+}
+
+function showToast(msg: string) {
+  toastMessage.value = msg
+  toastOpen.value = true
 }
 </script>

@@ -90,7 +90,7 @@ async function onSubmit() {
         email: cred.user.email
       })
     }
-    router.push('/users')
+    router.push('/tabs/users')
   } catch (err) {
     console.error(err)
     alert('Authentication failed')
