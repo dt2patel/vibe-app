@@ -114,13 +114,14 @@ const messages = ref<any[]>([])
 const storedMessages = ref<any[]>([])
 const queuedMessages = ref<any[]>([])
 const confirmIds = ref<Set<string>>(new Set())
-const isOnline = ref(navigator.onLine)
+const isOnline = ref(typeof navigator !== 'undefined' ? navigator.onLine : true)
 const loadingMessages = ref(true)
 const loadingUser = ref(true)
 const errorMessage = ref<string | null>(null)
 
 const chatId = computed(() => [currentUid.value, otherUid].sort().join('_'))
 const cacheKey = computed(() => `chat_cache_${chatId.value}`)
+const queuedKey = computed(() => `chat_queue_${chatId.value}`)
 
 let unsubMessages: (() => void) | null = null
 let fromMessages: any[] = []
@@ -140,9 +141,14 @@ function handleOffline() {
   }
 }
 
+function persistQueue() {
+  localStorage.setItem(queuedKey.value, JSON.stringify(queuedMessages.value))
+}
+
 async function flushQueue() {
   if (!queuedMessages.value.length) return
-  for (const q of [...queuedMessages.value]) {
+  for (const q of queuedMessages.value) {
+    if (q.pending === false) continue
     try {
       const docRef = await addDoc(collection(db, 'messages'), {
         chatId: q.chatId,
@@ -151,14 +157,16 @@ async function flushQueue() {
         text: q.text,
         createdAt: serverTimestamp()
       })
+      q.id = docRef.id
+      q.pending = false
       confirmIds.value.add(docRef.id)
       setTimeout(() => confirmIds.value.delete(docRef.id), 3000)
-      queuedMessages.value = queuedMessages.value.filter((m) => m.id !== q.id)
     } catch (err) {
       console.error('Failed to send queued message', err)
       break
     }
   }
+  persistQueue()
   mergeMessages()
 }
 
@@ -182,6 +190,10 @@ function updateStored() {
     return aTime - bTime
   }) as any[]
   localStorage.setItem(cacheKey.value, JSON.stringify(storedMessages.value))
+  queuedMessages.value = queuedMessages.value.filter(
+    (q) => !storedMessages.value.some((s) => s.id === q.id)
+  )
+  persistQueue()
   mergeMessages()
 }
 
@@ -238,11 +250,20 @@ onMounted(async () => {
   if (cached) {
     try {
       storedMessages.value = JSON.parse(cached)
-      mergeMessages()
     } catch (e) {
       console.warn('Failed to parse cached messages', e)
     }
   }
+
+  const cachedQueue = localStorage.getItem(queuedKey.value)
+  if (cachedQueue) {
+    try {
+      queuedMessages.value = JSON.parse(cachedQueue)
+    } catch (e) {
+      console.warn('Failed to parse queued messages', e)
+    }
+  }
+  mergeMessages()
 
   try {
     const userSnap = await getDoc(doc(db, 'users', otherUid))
@@ -285,28 +306,22 @@ async function sendMessage() {
   if (!newMessage.value.trim()) return
   const text = newMessage.value
   newMessage.value = ''
-  if (!isOnline.value) {
-    queuedMessages.value.push({
-      id: Date.now().toString(),
-      chatId: chatId.value,
-      from: currentUid.value,
-      to: otherUid,
-      text,
-      createdAt: new Date(),
-      status: 'queued'
-    })
-    mergeMessages()
-    return
-  }
-  const docRef = await addDoc(collection(db, 'messages'), {
+  const temp = {
+    id: `local_${Date.now()}`,
     chatId: chatId.value,
     from: currentUid.value,
     to: otherUid,
     text,
-    createdAt: serverTimestamp()
-  })
-  confirmIds.value.add(docRef.id)
-  setTimeout(() => confirmIds.value.delete(docRef.id), 3000)
+    createdAt: new Date(),
+    status: 'queued',
+    pending: true
+  }
+  queuedMessages.value.push(temp)
+  persistQueue()
+  mergeMessages()
+  if (isOnline.value) {
+    flushQueue()
+  }
 }
 
 function formatTime(ts: any) {
