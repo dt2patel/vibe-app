@@ -28,7 +28,7 @@
               </div>
               <div>{{ msg.text }}</div>
             </ion-label>
-            <ion-icon v-if="confirmIds.has(msg.id)" :icon="checkmarkDoneOutline" slot="end" />
+            <ion-icon v-if="confirmIds.has(msg.serverId || msg.id)" :icon="checkmarkDoneOutline" slot="end" />
             <ion-icon v-else-if="msg.status === 'queued'" :icon="timeOutline" slot="end" />
           </ion-item>
           <ion-item-options side="end">
@@ -157,7 +157,7 @@ async function flushQueue() {
         text: q.text,
         createdAt: serverTimestamp()
       })
-      q.id = docRef.id
+      q.serverId = docRef.id
       q.pending = false
       confirmIds.value.add(docRef.id)
       setTimeout(() => confirmIds.value.delete(docRef.id), 3000)
@@ -190,9 +190,11 @@ function updateStored() {
     return aTime - bTime
   }) as any[]
   localStorage.setItem(cacheKey.value, JSON.stringify(storedMessages.value))
-  queuedMessages.value = queuedMessages.value.filter(
-    (q) => !storedMessages.value.some((s) => s.id === q.id)
-  )
+  queuedMessages.value = queuedMessages.value.filter((q) => {
+    const serverMatch = q.serverId && storedMessages.value.some((s) => s.id === q.serverId)
+    const localMatch = storedMessages.value.some((s) => s.id === q.id)
+    return !(serverMatch || localMatch)
+  })
   persistQueue()
   mergeMessages()
 }
@@ -314,7 +316,8 @@ async function sendMessage() {
     text,
     createdAt: new Date(),
     status: 'queued',
-    pending: true
+    pending: true,
+    serverId: undefined
   }
   queuedMessages.value.push(temp)
   persistQueue()
