@@ -18,7 +18,13 @@ vi.mock('firebase/firestore', () => ({
   where: vi.fn(),
   onSnapshot: (_q: any, cb: any) => {
     const next = typeof cb === 'function' ? cb : cb.next
-    next({ docs: mockMessages.map((m) => ({ id: m.id, data: () => m })) })
+    next({
+      docs: mockMessages.map((m) => ({
+        id: m.id,
+        data: () => m,
+        metadata: { hasPendingWrites: false }
+      }))
+    })
     return vi.fn()
   },
   addDoc: vi.fn(),

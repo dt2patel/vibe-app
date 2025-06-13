@@ -137,7 +137,9 @@ async function startListener() {
   const unsubSent = onSnapshot(
     sentQ,
     (snapshot) => {
-      fromMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+      fromMessages = snapshot.docs
+        .filter((d) => !d.metadata.hasPendingWrites)
+        .map((d) => ({ id: d.id, ...d.data() }))
       updateCombined()
     },
     onSnapshotError
@@ -145,7 +147,9 @@ async function startListener() {
   const unsubReceived = onSnapshot(
     receivedQ,
     (snapshot) => {
-      toMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+      toMessages = snapshot.docs
+        .filter((d) => !d.metadata.hasPendingWrites)
+        .map((d) => ({ id: d.id, ...d.data() }))
       updateCombined()
     },
     onSnapshotError
